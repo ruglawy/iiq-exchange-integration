@@ -222,7 +222,7 @@ IIQ is the party responsible for provisioning/deprovisioning the `MailBox Access
         Recipient Management
         ```
         
-    3. On Active Directory, Go to **Computers**, right-click on the Exchange computer (e.g., `SPEXCHANGE`), Go to *Delegation*, Choose “Trust this computer for delegation to specified services only” and choose “Use any authentication protocol”, Press on “Users or Computers…” and choose the DC machine, and add these services:
+    3. On Active Directory, Go to **Computers**, right-click on the Exchange computer (e.g., `SPEXCHANGE`), Go to *Properties*, Go to *Delegation*, Choose “Trust this computer for delegation to specified services only” and choose “Use any authentication protocol”, Press on “Users or Computers…” and choose the DC machine, and add these services:
         
         ```powershell
         ldap      # Select the one with the machine name
