@@ -306,11 +306,3 @@ IIQ is the party responsible for provisioning/deprovisioning the `MailBox Access
         sudo keytool -importcert -alias exchange -file <PATH_TO_CERT>/exchange.cer -keystore <PATH_TO_JAVA_INSTALLATION>/lib/security/cacerts -storepass changeit
         ```
         
-5. On IdentityIQ
-    1. Go to Gear Icon → Global Settings → IdentityIQ Configuration
-    2. For *Email Notification Type*, select **SMTP/Basic**
-    3. For *Encryption*, select **TLS**
-    4. For *Default SMTP Host*, type the Exchange server IP
-    5. For *Default SMTP Port*, type `587`
-    6. For *Default From Address*, type `svc_iiq_mail@<DOMAIN>` , replace `<DOMAIN>` with your domain (e.g., `svc_iiq_mail@example.com`)
-    7. For the username and password, type in credentials for `svc_iiq_mail`
