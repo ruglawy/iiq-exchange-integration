@@ -29,7 +29,7 @@ Add-Content $log "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  SAM=$sam"
 
 $cred = Import-Clixml "C:\Scripts\svc_mailbox_automate.cred"
 
-Invoke-Command -ComputerName SPEXCHANGE `
+Invoke-Command -ComputerName SPEXCHANGE ` # Change "SPEXCHANGE" according to your Exchange Computer Name
     -Authentication CredSSP `
     -Credential $cred `
     -ScriptBlock {
