@@ -8,7 +8,7 @@ $MailboxGroup = "MailBox Access"
 $LogFile = "C:\Scripts\Mailbox-Reconcile.log"
 
 $ExcludedAccounts = @(
-    "SPEXCHANGE", # <--- Change this according to your Exchange Server Computer Name
+    "SPEXCHANGE", # <--- Change this according to your Exchange Account Name
     "Administrator",
     "krbtgt",
     "svc_iiq_mail",
