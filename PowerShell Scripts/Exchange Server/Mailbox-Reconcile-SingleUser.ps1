@@ -18,6 +18,7 @@ function Log($msg) {
 }
 
 # Safety exclusions
+# Change "SPEXCHANGE" according to your Exchange Account Name
 $ExcludedAccounts = @("SPEXCHANGE", "Administrator", "krbtgt", "svc_iiq_mail", "IIQ Mail Bot")
 
 if ($ExcludedAccounts -contains $User) {
