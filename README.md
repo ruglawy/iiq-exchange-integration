@@ -334,7 +334,7 @@ In this guide, we’ll be deploying IQService on the DC, having it perform Excha
     25. On the DC (or the machine hosting IQService), run this command to test WinRM connectivity:
         
         ```bash
-        Test-WsMan rugl-exch.ruglawy.corp -UseSSL
+        Test-WsMan <FQDN_OF_EXCHANGE_HERE> -UseSSL
         
         # Should execute with no errors, showing some information
         ```
