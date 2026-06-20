@@ -1,6 +1,6 @@
 # SailPoint IdentityIQ Exchange Onboarding Guide
 
-> This guide will go through the steps of onboarding Exchange onto IdentityIQ, starting from the very scratch of installing Windows Server.
+> This guide will go through the steps of onboarding Exchange onto IdentityIQ, starting from the very scratch of installing Windows Server. 
 > 
 
 > This guide sets up Mailboxes for employees found in the Active Directory.
