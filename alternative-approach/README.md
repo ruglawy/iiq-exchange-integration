@@ -169,10 +169,10 @@
 5. From the left-side panel, head to *servers*
 6. On the top-side panel, click on *virtual directories*
     
-    > This list contains all links to all websites related to Exchange. Most of them have Internal and External URLs which you can modify according to your needs. Highly recommended to set all of them as the same URL, except for the path itself.
+    > This list contains all links to all websites related to Exchange. Most of them have Internal and External URLs which you can modify according to your needs.
     > 
     
-    > *owa* stands for Outlook Web App, from which an employee can access their mailbox. Modify it according to your needs, but make sure to modify *ecp* as well, both have to be the URL except for the path itself (e.g., `/owa` and `/ecp` remain the same after the URL.
+    > *owa* stands for Outlook Web App, from which an employee can access their mailbox. Modify it according to your needs, but make sure to modify *ecp* as well, both have to be the URL except for the path itself (e.g., `/owa` and `/ecp` remain the same after the URL).
     > 
     
 7. On the DC, open up DNS Manager
