@@ -1,4 +1,4 @@
-# SailPoint IdentityIQ Exchange Onboarding Guide
+# SailPoint IdentityIQ Exchange Onboarding Guide (ALTERNATIVE APPROACH)
 
 > This guide will go through the steps of onboarding Exchange onto IdentityIQ, starting from the very scratch of installing Windows Server.
 > 
