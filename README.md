@@ -184,134 +184,223 @@
 
 <br><br>
 
-## IIQ Integration
+## IdentityIQ Exchange Configuration
 
-The approach we’ll be using to grant mailbox access to users is let DC and Exchange handle Mailbox provisioning to users by utilizing **PowerShell Scripts** and **Scheduled Tasks**
+This guide will focus on how to configure Exchange on IdentityIQ, enabling IQService to perform Exchange operations natively originating from IdentityIQ.
 
-We’ll also create a new security group called `MailBox Access` on Active Directory. Any user with a membership in this group gets mailbox access (either newly created mailbox if they didn’t already have one, or get their access back to their mailbox if they already have one).
+In this guide, we’ll be deploying IQService on the DC, having it perform Exchange operations remotely.
 
-We have two tasks:
-
-1. **Mailbox Reconciliation**: 
-    
-    This tasks runs every hour (can be modified) to ensure every member in the `MailBox Access` security group has mailbox access, and ensures that users outside of the security group has their mailbox access revoked. This task is hosted on the Exchange Server
-    
-    This task utilizes a PowerShell script that checks all Active Directory users that have mailbox access and their `MailBox Access` membership status:
-    
-    - If they’re in the security group but don’t have mailbox access, access is granted.
-    - If they’re NOT in the security group but have mailbox access, their access gets revoked.
-2. **Mailbox Access - Instant Trigger**: 
-    
-    This task gets triggered when a user joins/leaves the `MailBox Access` security group. It provides almost-instant mailbox access (or revocation) to the user who recently had their `MailBox Access` membership status changed (i.e., joined or left). However, sometimes it may fail for any reason, that’s why we have the **Mailbox Reconciliation** task to ensure everything is as expected. This task is hosted on the Domain Controller
-    
-    This task utilizes a PowerShell script that grants/revokes mailbox access based on their current membership status
-    
-    - If they just joined the security group, access is granted
-    - If they just left the security group, access is revoked.
-
-IIQ is the party responsible for provisioning/deprovisioning the `MailBox Access` security group (entitlement) to the users. Both DC and Exchange Server handle the rest of the mailbox access process.
-
-**STEPS OF INTEGRATION:**
-
-1. On the DC (logged in as `Administrator`)
-    1. On Active Directory, create a new security group called `MailBox Access` (case sensitive)
-    2. On Active Directory, create a new user with logon name of `svc_mailbox_automate` (Password never expires CHECKED, User must change password UNCHECKED), and add it to these security groups:
-        
-        ```
-        Exchange Trusted Subsystem
-        Recipient Management
-        ```
-        
-    3. On Active Directory, Go to **Computers**, right-click on the Exchange computer (e.g., `SPEXCHANGE`), Go to *Properties*, Go to *Delegation*, Choose “Trust this computer for delegation to specified services only” and choose “Use any authentication protocol”, Press on “Users or Computers…” and choose the DC machine, and add these services:
-        
-        ```powershell
-        ldap      # Select the one with the machine name
-        HOST      # Select the one with the machine name
-        ```
-        
-    4. Run PowerShell as administrator and type in this commmand:
-        
-        ```powershell
-        Enable-WSManCredSSP -Role Client -DelegateComputer <EXCHANGE_SERVER_MACHINE_NAME> -Force
-        ```
-        
-    5. Create a new folder in the `C:\` folder called `Scripts\`
-    6. Run PowerShell as administrator and type in this command:
-        
-        ```powershell
-        Get-Credential <DOMAIN_NAME>\svc_mailbox_automate | Export-Clixml C:\Scripts\svc_mailbox_automate.cred
-        ```
-        
-    7. Inside `Scripts\` , create a new file called `Trigger-Mailbox-Instant.ps1` and copy/paste the content found in the `PowerShell Scripts/Domain Controller/` directory
-    8. Create a new XML file called `Mailbox Access - Instant Trigger.xml` and copy/paste the content found in the `Tasks XMLs/Domain Controller/` directory
-    9. Open up *Task Scheduler*, right-click on *Task Scheduler Library*, and press *Import Task*
-    10. Import the previously created XML file.
-    11. For the “When running the task, use the following user account” option, choose `Administrator` (or any local account with administrative privileges on the DC)
-    12. Press *OK*
-2. On IdentityIQ, aggregate AD groups to add the newly-created security group to the entitlement catalog
-3. On the Exchange Server (logged in as the Exchange User you created with `Domain Admins, Schema Admins, Enterprise Admins` capabilities)
-    1. Run PowerShell as administrator and type in this command:
-        
-        ```powershell
-        Enable-WSManCredSSP -Role Server -Force
-        ```
-        
-    2. Open Exchange Management Shell and type in this command:
-        
-        ```powershell
-        # Edit according to your domain (e.g., example.com), change password if needed as well.
-        New-Mailbox -Name "IIQ Mail Bot" `
-          -UserPrincipalName svc_iiq_mail@<DOMAIN> `
-          -Password (ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force)
-        ```
-        
-    3. In the Exchange Management Shell, type in this command:
-        
-        ```powershell
-        Get-ExchangeCertificate | fl Thumbprint,Services,Subject
-        ```
-        
-    4. Copy the thumbprint of the certificate with `Services : SMTP` and `Subject : CN=<EXCHANGE_SERVER_COMPUTER_NAME>`
-    5. In the Exchange Management Shell, type in this command:
-        
-        ```powershell
-        $cert = Get-ExchangeCertificate -Thumbprint <THUMBPRINT_HERE>
-        # Then press enter, then type the next command
-        Export-Certificate -Cert $cert -FilePath "<PATH_YOU_DESIRE>\exchange.cer"
-        # Then press enter
-        
-        # YOU WILL NEED TO COPY THIS CERTIFICATE TO THE MACHINE THAT HOSTS IDENTITYIQ.
-        ```
-        
-    6. Create a new folder in the `C:\` folder called `Scripts\`
-    7. Inside `Scripts\` , create a new file called `Mailbox-Reconcile.ps1` and copy/paste the content found in the `PowerShell Scripts/Exchange Server/` directory
-    8. Inside `Scripts\` , create a new file called `Mailbox-Reconcile-SingleUser.ps1` and copy/paste the content found in the `PowerShell Scripts/Exchange Server/` directory
-    9. Create a new XML file called `Mailbox Reconciliation.xml` and copy/paste the content found in the `Tasks XMLs/Exchange Server/` directory
-    10. Open up *Task Scheduler*, right-click on *Task Scheduler Library*, and press *Import Task*
-    11. Import the previously created XML file.
-    12. For the “When running the task, use the following user account” option, choose the user you’re logged in as.
-4. On the machine where IdentityIQ is hosted
-    1. Test out SMTP connection to Exchange server
-        
-        ```powershell
-        telnet <EXCHANGE_SERVER_IP> 587
-        ```
-        
-        It should work normally. If it doesn’t, troubleshoot and fix.
-        
-    2. Put the certificate you previously generated on the Exchange server on this machine.
-    3. Open up terminal and execute this command:
+1. Use TLS for Forest Configuration in IdentityIQ
+    1. Import the DC certificate (or more preferably, the CA certificate) into the Java Truststore from which IdentityIQ is running
         
         ```bash
-        sudo keytool -importcert -alias exchange -file <PATH_TO_CERT>/exchange.cer -keystore <PATH_TO_JAVA_INSTALLATION>/lib/security/cacerts -storepass changeit
+        sudo keytool -importcert \
+        -alias <NEW_ALIAS_HERE> \
+        -file <PATH_TO_CERT>/root-ca.cer \
+        -keystore <PATH_TO_JAVA_HOME>/lib/security/cacerts 
         ```
-        <br>
-5. On IdentityIQ
-   
-    1. Go to Gear Icon → Global Settings → IdentityIQ Configuration
-    2. For *Email Notification Type*, select **SMTP/Basic**
-    3. For *Encryption*, select **TLS**
-    4. For *Default SMTP Host*, type the Exchange server IP or domain
-    5. For *Default SMTP Port*, type `587`
-    6. For *Default From Address*, type `svc_iiq_mail@<DOMAIN>` , replace `<DOMAIN>` with your domain (e.g., `svc_iiq_mail@example.com`)
-    7. For the username and password, type in credentials for `svc_iiq_mail`
+        
+    2. Check the `Use TLS` box in the Forest Configuration table in the Active Directory application on IdentityIQ, then try testing the connection by clicking the `Test Connection` button at the end of the page
+        
+        > TIP: If it gives you an error regarding `No subject alternative DNS name found for: example.local` , add a SAN DNS attribute equaling to `example.local` (i.e., your domain) to the DC certificate (i.e., re-issue new certificate with the added SAN attribute).
+        > 
+
+1. Install IQService on the DC having TLS configured
+    
+    > If you already had IQService installed and was configured to be used with **NON-TLS** connection, uninstall it first by using `IQService.exe -u` command.
+    > 
+    
+    1. Head to the IQService directory on the DC, open command prompt as Administrator, and type this command:
+        
+        ```bash
+        IQService.exe -i -o 6060      # You can use any other available port
+        ```
+        
+    2. Add the IQService user account that will be used to log on to the IQService service
+        
+        ```bash
+        IQService.exe -a example\iqservice
+        ```
+        
+    3. Open up Services, right click on the `SailPoint IQService-Instance1` service, click properties
+    4. Go to Logon tab
+    5. For “Log on as:”, choose “This account” and choose the IQService account and fill out the credentials
+    6. Start up the service (or restart if it was already running)
+    7. On IdentityIQ, go to the IQService Configuration table, fill out the fields appropriately
+        - **IQService Host**: ****The FQDN of the machine hosting the IQService service (i.e., the DC in our case)
+        - **IQService Port**: The port you configured in step a (i.e., `6060`)
+        - **IQService User**: The user that logs on to the IQService service (i.e., `example\iqservice`)
+        - **IQService Password**: The password of the IQService user
+    8. Test the connection using the Test Connection button at the end of the page
+
+1. Change the Exchange Server certificate to one signed by the CA in the domain
+    
+    > If the Exchange Server already has a CA-signed certificate, you can move on to step 4
+    > 
+    
+    1. On the Exchange Server, open up Exchange Management Shell, and type this command
+        
+        ```bash
+        Get-ExchangeCertificate | ft Thumbprint,Subject,Issuer,Services
+        ```
+        
+    2. Look at the Services column (if you can’t see it, expand the shell window and re-run the command), you’ll notice that the IIS service is issued to a self-signed certificate (i.e., the Exchange Server itself), we need the IIS certificate to be signed by a trusted CA (which will be the DC)
+    3. On the Exchange Server, open up IIS Manager
+        
+        > If it doesn’t open and gives errors, open up command prompt, type `mmc.exe` and press Enter, go to File, then Add/Remove Snap-in, then Internet Information Services (IIS) Manager, then press Add, then OK.
+        > 
+    4. On the left-hand section, click on your server name
+    5. After that, in the middle section, double-click on “Server Certificates”
+    6. After that, in the right-hand section, click “Create Certificate Request…”
+    7. Fill the fields appropriately, with the Common Name filled with the FQDN of the Exchange Server (e.g., `exch-serv.example.local`), then click Next
+        
+        > The most important field if the Common Name, other fields are considered meta-data and don’t have to be accurate for labs.
+        > 
+        
+    8. For the Bit length, choose at least 2048, then click Next
+    9. Specify the name and path of the new CSR file, and edit the extension to be `.csr` instead of `.txt` , then click Finish
+    10. Copy the `.csr` file to the DC.
+    11. On the DC, make sure you have the following roles installed:
+        1. Certificate Enrollment Web Service
+        2. Certification Authority Web Enrollment
+        
+    12. Go to `http://localhost/certsrv` 
+    13. Click “Request a certificate”, then click “advanced certificate request”
+    14. Open up the `.csr` file in any text editor, copy the contents (EVERYTHING, INCLUDING THE DASHES), and paste them in the “Saved Request” field in the browser.
+        
+        > **IMPORTANT**: Make sure there are no trailing spaces or blank lines, if there are, remove them.
+        > 
+        
+    15. For the Certificate Template, choose “Web Server”, then click the Submit button
+    16. Download the certificate (download the chain just in case, not necessarily needed)
+    17. Copy the new `.cer` certificate to the Exchange server
+    18. On the Exchange Server, go to the IIS Manager (assuming you never closed the window), on the right-hand section, click on “Complete Certificate Request”
+    19. Select the `.cer` file, fill out any friendly name (e.g., `Exchange-Signed-IIS`), and certificate store `Personal` , then click OK.
+    20. Verify that the certificate was successfully imported using this command in Exchange Management Shell:
+        
+        ```bash
+        Get-ExchangeCertificate | ft Thumbprint,Subject,Issuer,Services
+        ```
+        
+        > You’ll notice that the newly-imported certificate — signed by the CA — has no services. We need to attach the IIS service to it.
+        > 
+        
+    21. Take the new certificate’s thumbprint, and put it in this command, and run it in Exchange Management Shell:
+        
+        ```bash
+        Enable-ExchangeCertificate -Thumbprint <NEW_THUMBPRINT_HERE> -Services IIS
+        ```
+        
+    22. Restart IIS by running this command in the Exchange Management Shell:
+        
+        ```bash
+        iisreset
+        ```
+        
+        > If it fails, make sure you opened the Exchange Management Shell as Administrator (i.e., Run As Administrator)
+        > 
+        
+    23. Verify that now the new certificate has the IIS service attached to it by running this command again in the Exchange Management Shell:
+        
+        ```bash
+        Get-ExchangeCertificate | ft Thumbprint,Subject,Issuer,Services
+        ```
+        
+        > You should now see IIS listed in the Services column of the new certificate
+        > 
+        
+    24. On the Exchange Server, run PowerShell as Administrator, and run these commands in order
+        
+        ```bash
+        # 1. Check if WinRM is running
+        winrm quickconfig     # Should indicate that WinRM is running
+        
+        # 2. Check listeners
+        winrm enumerate winrm/config/listener  # Expected port 5985, we want to use 5986
+        
+        # 3. Create HTTPS listener using the new certificate (NOTE: EDIT PLACEHOLDERS)
+        winrm create winrm/config/Listener?Address=*+Transport=HTTPS '@{Hostname="<FQDN_OF_EXCHANGE_SERVER_HERE>";CertificateThumbprint="<CERTIFICATE_THUMBPRINT_HERE>"}'
+        
+        # OPTIONAL STEP: If running on production environment, and have a firewall up:
+        New-NetFirewallRule -DisplayName "WinRM HTTPS 5986" -Direction Inbound -Protocol TCP -LocalPort 5986 -Action Allow
+        
+        # 4. Restart WinRM
+        Restart-Service WinRM
+        
+        # 5. Check listeners again
+        winrm enumerate winrm/config/listener  # Now listens for HTTPS on port 5986
+        ```
+        
+    25. On the DC (or the machine hosting IQService), run this command to test WinRM connectivity:
+        
+        ```bash
+        Test-WsMan rugl-exch.ruglawy.corp -UseSSL
+        
+        # Should execute with no errors, showing some information
+        ```
+        
+
+1. On the DC (or the machine running the IQService service), mount the Exchange ISO used for the Exchange Server setup, open up command prompt as administrator, head to the CD drive, and run this command
+    
+    ```bash
+    # Make sure you're in the CD drive in the command prompt
+    Setup.exe /Role:ManagementTools /IAcceptExchangeServerLicenseTerms_DiagnosticDataON
+    ```
+    
+    > It will check for prerequisites. If any found missing, just install them and execute the command again.
+    > 
+
+1. Restart the machine
+2. On the Exchange Server, open up Exchange Management Shell as administrator and run these commands in order:
+    
+    ```bash
+    # 1. Make sure you have the PowerShell virtual directory set to use HTTPS instead of HTTP,
+    # Take the URL found in the ECP -> Servers -> Virtual directories and place it in the 
+    # InternalURL paramater in this command
+    Set-PowerShellVirtualDirectory -Identity "PowerShell (Default Web Site)" `
+      -InternalUrl https://<EXCHANGE_FQDN_HERE>/PowerShell/ `
+      -WindowsAuthentication $true `
+      -BasicAuthentication $true
+      
+    # 2. Reset IIS
+    iisreset
+    ```
+    
+
+1. Test connecting to Exchange powershell remotely using the IQService account credentials from the machine (e.g., the machine hosting the IQService) by opening up PowerShell as administrator and running these in order
+    
+    ```bash
+    # 1. Catch credentials of the IQService and store it in $cred variable
+    $cred = Get-Credential example\iqservice  # Adjust domain and account name accordingly
+    
+    # 2. Initiate a new PSSession
+    New-PSSession `
+      -ConfigurationName Microsoft.Exchange `
+      -ConnectionUri https://<EXCHANGE_FQDN_HERE>/powershell `
+      -Authentication Basic `
+      -Credential $cred
+    ```
+    
+    > You should now see an entry printed on the window having `State` column as `Opened` and `Availibility` column as `Available`
+    > 
+
+1. On IdentityIQ, go to the Active Directory application, head to the Provisioning Policies, click on the Create provisioning policy.
+2. In the Exchange section, open up the Exchange Alias field, and adjust a script to auto-fill it whenever the provisioning policy is used in a provisioning plan, sample script is as follows:
+    
+    ```bash
+    String mailalias = identity.getFirstname() + "_" + identity.getLastname();
+    return mailalias;
+    ```
+    
+
+1. On DC, make sure the IQService account has the following security groups:
+    
+    ```bash
+    Exchange Trusted Subsystem
+    Recipient Management
+    Domain Admins
+    Account Operators   # <-- Not required, but sometimes operations fail without it
+    ```
+    
+2. On IdentityIQ, go to Active Directory application, head to Configuration → Settings, and fill out the Exchange Configuration table accordingly, then click Add.
+3. Test onboarding a new Joiner onto IIQ having an AD account created for them and see if they successfully get a mailbox.
