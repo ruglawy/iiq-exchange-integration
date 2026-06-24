@@ -199,8 +199,10 @@ In this guide, we’ll be deploying IQService on the DC, having it perform Excha
         -file <PATH_TO_CERT>/root-ca.cer \
         -keystore <PATH_TO_JAVA_HOME>/lib/security/cacerts 
         ```
-        
-    2. Check the `Use TLS` box in the Forest Configuration table in the Active Directory application on IdentityIQ, then try testing the connection by clicking the `Test Connection` button at the end of the page
+
+    2. Restart the web server (e.g., Tomcat)
+       
+    3. On IdentityIQ, check the `Use TLS` box in the Forest Configuration table in the Active Directory application, then try testing the connection by clicking the `Test Connection` button at the end of the page
         
         > TIP: If it gives you an error regarding `No subject alternative DNS name found for: example.local` , add a SAN DNS attribute equaling to `example.local` (i.e., your domain) to the DC certificate (i.e., re-issue new certificate with the added SAN attribute).
         > 
