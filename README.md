@@ -342,7 +342,7 @@ In this guide, we’ll be deploying IQService on the DC, having it perform Excha
         ```
         
 
-1. On the DC (or the machine running the IQService service), mount the Exchange ISO used for the Exchange Server setup, open up command prompt as administrator, head to the CD drive, and run this command
+1. On the DC (or the machine running the IQService service), mount the Exchange ISO used for the Exchange Server setup (MAKE SURE IT'S THE SAME EXCHANGE SERVER VERSION AND CUMULATIVE UPDATE), open up command prompt as administrator, head to the CD drive, and run this command
     
     ```bash
     # Make sure you're in the CD drive in the command prompt
