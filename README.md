@@ -3,9 +3,6 @@
 > This guide will go through the steps of onboarding Exchange onto IdentityIQ, starting from the very scratch of installing Windows Server. 
 > 
 
-> This guide sets up Mailboxes for employees found in the Active Directory.
-> 
-
 > We’ll be installing **Windows Server 2022**, and **Exchange 2019 CU14**. This guide should work on other versions as well, make sure to check version compatibilities in the following link: [Exchange Server Supportability Matrix](https://learn.microsoft.com/en-us/exchange/plan-and-deploy/supportability-matrix)
 > 
 
