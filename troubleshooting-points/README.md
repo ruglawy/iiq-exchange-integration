@@ -1,3 +1,4 @@
+# IdentityIQ Exchange Configuration Troubleshooting Points
 - When testing WinRM connection using this command:
     
     ```powershell
