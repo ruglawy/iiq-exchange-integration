@@ -1,3 +1,4 @@
+# IdentityIQ Active Directory Certificates Summary
 We have three main connections that require TLS configurations:
 
 1. IdentityIQ ➜ Global Catalog Server
